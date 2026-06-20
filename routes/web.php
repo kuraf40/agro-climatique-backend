@@ -6,6 +6,7 @@ use App\Http\Controllers\AgroMeteoController; // <-- Très important : il faut i
 
 
 Route::post('/api/login', [AuthController::class, 'login']);
+Route::post('/api/register', [AuthController::class, 'register']);
 Route::post('/api/logout', [AuthController::class, 'logout']);
 
 

@@ -9,9 +9,58 @@ use Illuminate\Support\Facades\Hash;
 class AuthController extends Controller
 {
     /**
+     * Gérer l'inscription d'un nouvel agriculteur.
+     * * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function register(Request $request)
+    {
+        // 1. Validation stricte des données entrantes
+        $request->validate([
+            'nom' => 'required|string|max:255',
+            'prenom' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users',
+            'password' => 'required|string|min:6',
+            'telephone' => 'required|string',
+        ]);
+
+        // 2. Création de l'utilisateur avec hachage du mot de passe (Bcrypt)
+        $user = User::create([
+            'nom' => $request->nom,
+            'prenom' => $request->prenom,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+            'telephone' => $request->telephone,
+            'role' => 'agriculteur', // Rôle imposé par défaut pour l'inscription mobile
+        ]);
+
+        // 3. Ouverture et stockage manuel des variables dans la session PHP
+        $request->session()->put('user_id', $user->id);
+        $request->session()->put('user_role', $user->role);
+        $request->session()->put('user_nom', $user->prenom . ' ' . $user->nom);
+
+        // 4. Régénération de l'ID de session pour bloquer la fixation de session
+        $request->session()->regenerate();
+
+        // 5. Réponse au format JSON avec statut 201 (Created)
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Compte agricole créé avec succès.',
+            'user' => [
+                'id' => $user->id,
+                'nom' => $user->nom,
+                'prenom' => $user->prenom,
+                'email' => $user->email,
+                'role' => $user->role,
+                'telephone' => $user->telephone
+            ],
+            'redirect' => '/dashboard'
+        ], 201);
+    }
+
+    /**
      * Gérer l'authentification et l'ouverture de la session (Connexion).
-     * 
-     * @param  \Illuminate\Http\Request  $request
+     * * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function login(Request $request)
@@ -35,7 +84,7 @@ class AuthController extends Controller
 
         // 4. Création et stockage manuel des variables dans la session PHP de Laravel
         $request->session()->put('user_id', $user->id);
-        $request->session()->put('user_role', $user->role); // Permet de distinguer 'agriculteur' et 'admin'
+        $request->session()->put('user_role', $user->role); 
         $request->session()->put('user_nom', $user->prenom . ' ' . $user->nom);
 
         // 5. Régénération de l'ID de session pour bloquer les attaques par fixation de session
@@ -59,8 +108,7 @@ class AuthController extends Controller
 
     /**
      * Gérer la fermeture de la session et la déconnexion sécurisée.
-     * 
-     * @param  \Illuminate\Http\Request  $request
+     * * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function logout(Request $request)
